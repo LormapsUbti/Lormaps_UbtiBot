@@ -7,12 +7,12 @@ class StateMachine:
         pass
 
     async def get_behavior(self, msg):
-        print(msg)
+        print(msg.text)
         if msg.text in config.start_options_list:
             return Start.Start(msg)
-        elif msg.text in config.weather_command_list[0]:
+        elif msg.text == config.weather_command:
             return Weather.Weather(msg)
-        elif msg.text in config.schedule_command_list[0]:
+        elif msg.text == config.schedule_command:
             return Schedule.Schedule(msg)
         else:
-            return Exception_behavior.Exception_Behavior(msg)
+            return Exception_behavior.Exception_Behavior(msg, error_code=1)

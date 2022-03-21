@@ -6,9 +6,10 @@ import time
 from dateutil.parser import parse
 import csv
 import os
+from behavior import Exception_behavior
+
 
 class Schedule(behavior.My_behavior.My_behavior):
-
     response = None
     transport = None
     data = None
@@ -17,12 +18,15 @@ class Schedule(behavior.My_behavior.My_behavior):
     country_name = None
     date = None
     result_data = None
+    city_name = None
+    region = None
 
     def __init__(self, message):
         self.state = 'start'
         self.button_names = config.answers[message.text]
 
-    async def parse_all(self):
+    @staticmethod
+    async def parse_all():
         url = f"https://api.rasp.yandex.net/v3.0/stations_list/?apikey={config.yandex_key}&lang=ru_RU&format=json"
         req = requests.get(url)
         data = req.json()
@@ -73,43 +77,27 @@ class Schedule(behavior.My_behavior.My_behavior):
         else:
             print("ФАЙЛ В ОПЕРАТИВКЕ, ПЛЯШЕМ")
 
-    async def logic(self, message):
-        message_text = str(message.text).lower()
-        if self.state == 'start':
-            self.response = "Какой вид транспорта тебя интересует?"
-            self.state = 'choice_transport'
-        elif self.state == 'choice_transport':
-            transport = message.text.split(" ")[0].lower()
-            print('transport ========== ', transport)
-            await self.get_transport(transport)
-        elif self.state == 'choice_cities':
-            await self.get_data()
-            await self.choice_cities(message_text)
-        elif self.state == 'choice_country':
-            await self.choice_country(message_text)
-        elif self.state == 'choice_region':
-            await self.choice_region(message_text)
-        elif self.state == "choice_station":
-            await self.choice_station(message_text)
-        elif self.state == 'choice_date':
-            await self.choice_date(message_text)
-        elif self.state == 'ticket_info':
-            await self.ticket_info()
-        elif self.state == "get_result":
-            await self.get_result(message_text)
+    async def start(self, message):
+        self.response = "Какой вид транспорта тебя интересует?"
+        self.state = 'choice_transport'
 
-    async def get_transport(self, transport):
-        if transport in config.transport_dict:
-            self.transport = [transport, config.transport_dict[transport]]
-            print(self.transport)
-            self.response = f'Выбери город отправления'
+    async def get_transport(self, message):
+        transport = message.split()[0].lower()
+        try:
+            if message.capitalize() in config.answers[config.schedule_command]:
+                self.transport = [transport, config.transport_dict[transport]]
+                print(self.transport)
+                self.response = f'Выбери город отправления'
+                self.button_names = None
+                self.state = 'choice_cities'
+            else:
+                self.response = await Exception_behavior.Exception_Behavior(message, error_code=4).get_response(message)
+                self.button_names = config.answers[config.schedule_command]
+                self.state = 'choice_transport'
+        except:
+            self.response = await Exception_behavior.Exception_Behavior(message, error_code=0).get_response(message)
+            self.state = 'end'
             self.button_names = None
-            self.state = 'choice_cities'
-        else:
-            self.response = 'Используй кнопки'
-            print("schedule_command_list ==== ", config.schedule_command_list)
-            self.button_names = config.answers[config.schedule_command_list[0]]
-            self.state = 'choice_transport'
 
     async def get_cities(self, same_named_cities):
         if self.departure_city_code is None:
@@ -135,6 +123,7 @@ class Schedule(behavior.My_behavior.My_behavior):
             self.state = 'end'
 
     async def choice_cities(self, new_message):
+        await self.get_data()
         if new_message in Schedule.data.City.unique():
             same_named_cities = Schedule.data[(Schedule.data['City'] == f"{new_message}") &
                                               (Schedule.data['Transport_type'] == self.transport[1])]
@@ -227,7 +216,6 @@ class Schedule(behavior.My_behavior.My_behavior):
         print('Отправляю запрос')
         print(f'Из {self.departure_city_code} B {self.arrival_city_code}')
         if self.date is None:
-            # url = f"https://api.rasp.yandex.net/v3.0/search/?apikey={yandex_key}&format=json&from={departure_code}&to={arrival_code}&lang=ru_RU&page=1&date={date}&limit={limit}&transport_types={transport_types}"
             url = f"https://api.rasp.yandex.net/v3.0/search/?apikey={config.yandex_key}&format=json&from={self.departure_city_code}&to={self.arrival_city_code}&lang=ru_RU&page=1&limit={limit}&transport_types={self.transport[1]}"
         else:
             url = f"https://api.rasp.yandex.net/v3.0/search/?apikey={config.yandex_key}&format=json&from={self.departure_city_code}&to={self.arrival_city_code}&lang=ru_RU&page=1&limit={limit}&transport_types={self.transport[1]}&date={self.date}"
@@ -251,15 +239,15 @@ class Schedule(behavior.My_behavior.My_behavior):
     async def ticket_info(self):
         result = await self.send_url()
         len_result = result['pagination']['total']
-        self.response = f'В этот день запланировано {len_result} рейсов, '  \
+        self.response = f'В этот день запланировано {len_result} рейсов, ' \
                         f'выбери подходящий для получения детальной информации'
         await self.get_result_data(result, len_result)
         all_names = []
         for i, data in self.result_data.iterrows():
-            button_name = f"Отправление  --  {data['departure_time']}  " \
-                          f"~  Прибытие  --  {data['arrival_time']},\n" \
-                          f"Номер рейса - {data['duration_flight']}  " \
-                          f"~  Время в пути - {data['journey_time']}\n" \
+            button_name = f"Отправление -- {data['departure_time']}  " \
+                          f"~  Прибытие -- {data['arrival_time']},\n" \
+                          f"Номер рейса - {data['duration_flight']} " \
+                          f"~ Время в пути - {data['journey_time']}\n" \
                           f"Рейс номер {i}"
             all_names.append(button_name)
         self.button_names = all_names
@@ -268,7 +256,7 @@ class Schedule(behavior.My_behavior.My_behavior):
     async def get_result_data(self, result, len_result):
         columns_names = ["departure_time", "arrival_time", "duration_flight", "journey_time", "title",
                          "from_station_type", "from_station_title", "to_station_type", "to_station_title",
-                         "carrier", "vehicle"]  ### добавь days_of_running
+                         "carrier", "vehicle"]              ### добавь days_of_running
         all_info = []
         for i in range(len_result):
             departure_time = parse(result['segments'][i]['departure'])
@@ -276,12 +264,12 @@ class Schedule(behavior.My_behavior.My_behavior):
             arrival_time = parse(result['segments'][i]['arrival'])
             arrival_time_new = arrival_time.time().strftime('%H:%M')
             journey_time = result['segments'][i]['duration']
-            if journey_time<0:
+            if journey_time < 0:
                 print("Я отрицательный")
                 journey_time = 86400 + journey_time
                 journey_time_new = str(time.strftime("%H:%M", time.gmtime(journey_time)))
             elif journey_time > 86400:
-                journey_time_new = str(time.strftime("%d дня (дней) и %H:%M", time.gmtime(journey_time-86400)))
+                journey_time_new = str(time.strftime("%d дня (дней) и %H:%M", time.gmtime(journey_time - 86400)))
             else:
                 journey_time_new = str(time.strftime("%H:%M", time.gmtime(journey_time)))
             duration_flight = str(result['segments'][i]['thread']['number'])
@@ -297,9 +285,9 @@ class Schedule(behavior.My_behavior.My_behavior):
             else:
                 carrier = 'Неизвестно'
             vehicle = str(result['segments'][i]['thread']['vehicle'])
-            all_info.append([departure_time_new, arrival_time_new, duration_flight_new,journey_time_new,
-                            title, from_station_type, from_station_title,
-                             to_station_type, to_station_title, carrier, vehicle])    ### добавь days_of_running
+            all_info.append([departure_time_new, arrival_time_new, duration_flight_new, journey_time_new,
+                             title, from_station_type, from_station_title,
+                             to_station_type, to_station_title, carrier, vehicle])  ### добавь days_of_running
         self.result_data = pd.DataFrame(all_info, columns=columns_names)
 
     async def get_result(self, message_text):
@@ -341,5 +329,21 @@ class Schedule(behavior.My_behavior.My_behavior):
         self.button_names = None
 
     async def get_response(self, message):
-        await self.logic(message)  ## как правильно импортнуть all_cities?????
+        await self.logic(message)
         return self.response
+
+    states = {
+        "start": start,
+        "choice_transport": get_transport,
+        "choice_cities": choice_cities,
+        "choice_country": choice_country,
+        "choice_region": choice_region,
+        "choice_station": choice_station,
+        "choice_date": choice_date,
+        "ticket_info": ticket_info,
+        "get_result": get_result
+    }
+
+    async def logic(self, message):
+        message_text = str(message.text).lower()
+        await self.states[self.state](self, message_text)

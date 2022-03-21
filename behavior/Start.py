@@ -7,14 +7,14 @@ class Start(behavior.My_behavior.My_behavior):
 
     def __init__(self, message):
         self.state = 'start'
-        self.button_names = config.answers[message.text]
+        self.button_names = config.answers[config.start_options_list[0]]
 
     async def logic_response(self, message):
         self.state = 'end'
-        if message in config.answers:
+        if message in config.start_options_list[0:2]:
             self.response = f'Нажал на "{message}", список моих возможностей находится ниже:'
-        else:
-            self.response = 'Используй клавиатуру'
+        elif message == "/quit":
+            self.response = "Начнем с начала, список моих возможностей находится ниже:"
 
     async def get_response(self, message):
         await self.logic_response(message.text)

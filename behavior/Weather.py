@@ -3,44 +3,48 @@ import behavior.My_behavior
 import requests
 from _datetime import datetime
 from deep_translator import GoogleTranslator
+from behavior import Exception_behavior
+
+weather_state_list = ['start', 'find_weather', 'end']
 
 
 class Weather(behavior.My_behavior.My_behavior):
     response = None
     data = None
+    weather_result = None
 
     def __init__(self, message):
-        self.state = 'start'
+        self.state = weather_state_list[0]
         self.button_names = config.answers[message.text]
 
     ###################
     async def logic_response(self, message):
-        if self.state == 'start':
-            self.response = 'Напиши название города, если тебе лень -\n' \
-                            'ты можешь отправить мне свои геоданные,\n' \
-                            'для этого нажми кнопку "Геоданные"'
-            self.state = 'find_weather'
-        elif self.state == 'find_weather':
-            if message.text is None and message.location.latitude is not None:
-                lat = message.location.latitude
-                lon = message.location.longitude
-                self.response = await self.print_weather(await self.current_weather(lat, lon))
-                self.state = 'end'
-            else:
-                self.weather_result = await self.current_weather(message.text)
-                print("weather_result === ", self.weather_result)
-                if len(self.weather_result) > 3:
-                    self.response = await self.print_weather(self.weather_result)
-                elif self.weather_result == False:
-                    self.response = 'Не удается получить данные с сервера'
+        try:
+            if self.state == "start":
+                self.response = 'Напиши название города, если тебе лень -\n' \
+                                'ты можешь отправить мне свои геоданные,\n' \
+                                'для этого нажми кнопку "Геоданные"'
+                self.state = "find_weather"
+            elif self.state == "find_weather":
+                self.button_names = None
+                if message.text is None and message.location.latitude is not None:
+                    lat = message.location.latitude
+                    lon = message.location.longitude
+                    self.response = await self.print_weather(await self.current_weather(lat, lon))
+                    self.state = "end"
                 else:
-                    self.response = 'Город введен не корректно'
-                self.state = 'end'
-            self.button_names = None
-
-        else:
-            self.response = 'Такого не должно было произойти'
-            self.state = 'end'
+                    try:
+                        self.weather_result = await self.current_weather(message.text)
+                        print("weather_result === ", self.weather_result)
+                        self.response = await self.print_weather(self.weather_result)
+                        self.state = 'end'
+                    except:
+                        if not self.weather_result:
+                            self.response = await Exception_behavior.Exception_Behavior(message, error_code=2).get_response(message)
+                        else:
+                            self.response = await Exception_behavior.Exception_Behavior(message, error_code=3).get_response(message)
+        except:
+            self.response = await Exception_behavior.Exception_Behavior(message, error_code=0).get_response(message)
 
     async def get_response(self, message):
         await self.logic_response(message)
@@ -56,21 +60,18 @@ class Weather(behavior.My_behavior.My_behavior):
                 data = req.json()
                 return data
 
-            except Exception as ex:
-                print(ex)
+            except:
                 return False
         else:
             print("current_weather by city name")
             message = lat
             try:
-
                 url = f"http://api.openweathermap.org/data/2.5/weather?q={message}&appid={config.open_weather_token}&units=metric"
                 req = requests.get(url)
                 data = req.json()
                 return data
 
-            except Exception as ex:
-                print(ex)
+            except:
                 return False
 
     async def print_weather(self, data):
