@@ -13,24 +13,20 @@ class Main_bot():
     def __init__(self):
         self.my_state_machine = State_machine.StateMachine()
 
-    async def set_user_message(self, message):
+    async def get_answer(self, message):
         if message.text in config.start_options_list or self.my_behavior is None:
             self.my_behavior = await self.my_state_machine.get_behavior(message)
         print('self.my_behavior  ===   ', self.my_behavior)
         self.message = message
-
-    async def find_answer(self, message):
-        # await self.my_behavior.set_answer(user_message.text)
-        self.response = await self.my_behavior.get_response(message)
+        self.response = await self.my_behavior.get_response(self.message)
         self.keyboard = await self.get_keyboard()
+        await self.sent_message()
 
-    async def get_answer(self):
-        await self.find_answer(self.message)
+    async def sent_message(self):
         await bot.send_message(chat_id=self.message.chat.id,
                                text=self.response,
                                reply_markup=self.keyboard)
         if self.my_behavior.state == 'end':
-            print("self.my_behavior, self.my_state_machine ======  ", self.my_behavior, self.my_state_machine)
             if str(self.my_behavior).split(".")[1] != "Start":
                 await self.message.answer('Чтобы начать сначала нажми "/start"')
             self.my_behavior = None

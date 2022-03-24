@@ -107,11 +107,7 @@ class Schedule(behavior.My_behavior.My_behavior):
             self.button_names = None
         elif self.arrival_city_code is None:
             print(self.departure_city_code, "   ======   ", same_named_cities.City_code.unique())
-            if len(same_named_cities.City_code.unique()) > 1:
-                self.response = 'Это проблема, которую я пока не могу решить, извините'
-                self.state = 'end'
-                self.button_names = None
-            elif self.departure_city_code == same_named_cities.City_code.unique():
+            if self.departure_city_code == same_named_cities.City_code.unique():
                 self.response = "Город прибытия совпадает с городом отправления. Введи город прибытия заново"
                 self.state = 'choice_cities'
                 self.button_names = None
@@ -187,10 +183,11 @@ class Schedule(behavior.My_behavior.My_behavior):
 
     async def get_date(self):
         result = await self.send_url()
-        if 'error' in result:
-            self.response = "Ошибка при обращении к серверу"
-            self.state = 'end'
-        else:
+
+        # if 'error' in result:
+        #     self.response = "Ошибка при обращении к серверу"
+        #     self.state = 'end'
+        try:
             print(result['pagination']['total'])
             len_result = result['pagination']['total']
             if len_result == 0:
@@ -202,6 +199,8 @@ class Schedule(behavior.My_behavior.My_behavior):
                                 f"Теперь осталось  выбрать дату отправления:"
                 await self.logic_date_button(len_result, result)
                 self.state = 'choice_date'
+        except:
+            self.response = await Exception_behavior.Exception_Behavior(error_code=5).get_response()
 
     async def logic_date_button(self, len_result, result):
         all_date = []
@@ -301,7 +300,7 @@ class Schedule(behavior.My_behavior.My_behavior):
                 self.response = 'Выход за рамки'
                 self.state = 'get_result'
         except:
-            self.response = 'Используй кнопки'
+            self.response = await Exception_behavior.Exception_Behavior(message_text, error_code=4).get_response(message_text)
             self.state = 'get_result'
 
     async def print_result(self, result):
