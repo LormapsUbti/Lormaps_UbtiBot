@@ -1,9 +1,10 @@
+import os
 
 telegram_token = "5277435807:AAFuPnVPhNpZ7Jvo2gzmoGkt8JgkIvwSIfw"
 open_weather_token = "984f715fc2483dacc25598e88d3aeb1c"
 yandex_key = "8c823408-bc83-4b73-a95c-6a5d45bce8a6"
 
-path = "C:/Users/Andrey/PycharmProjects/MainBot/"
+path = os.getcwd()
 
 start_options_list = ['/start', '/help', '/quit']
 weather_command = 'Прогноз погоды'

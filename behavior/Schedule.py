@@ -55,6 +55,11 @@ class Schedule(behavior.My_behavior.My_behavior):
                             f'{station["transport_type".lower()]}'
                         ])
 
+        dir_exists = os.path.exists('data')
+        print('Directory exists: ' + str(dir_exists))
+        if(not dir_exists):
+            os.mkdir('data')
+
         with open('data/Schedule_data.csv', 'w', newline="", encoding="utf-8") as File:
             writer = csv.writer(File, delimiter=";")
             writer.writerow(
