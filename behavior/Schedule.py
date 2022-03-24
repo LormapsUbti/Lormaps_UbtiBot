@@ -231,7 +231,7 @@ class Schedule(behavior.My_behavior.My_behavior):
             print(ex)
             return False
 
-    async def choice_date(self, message_text):
+    async def choice_date(self, message_text):      # choose_date
         if message_text not in self.button_names:
             self.response = 'Используй кнопки'
             self.state = 'choice_date'
