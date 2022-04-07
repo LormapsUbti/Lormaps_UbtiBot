@@ -1,8 +1,9 @@
 import os
+import env_vars
 
-telegram_token = "5277435807:AAFw-UqYgJ6521JqVXN-SJG_1t-dIofHd-8"
-open_weather_token = "984f715fc2483dacc25598e88d3aeb1c"
-yandex_key = "8c823408-bc83-4b73-a95c-6a5d45bce8a6"
+telegram_token = env_vars.telegram_token
+open_weather_token = env_vars.telegram_token
+yandex_key = env_vars.telegram_token
 
 path = os.getcwd()
 
@@ -19,8 +20,6 @@ answers = {
 transport_dict = {'поезд': 'train', 'самолет': 'plane', 'автобус': 'bus'}
 default_keyboard_options = [True, 1]
 
-# zodiac_signs = ['Рыбы', 'Водолей', 'Козерог', 'Стрелец', 'Скорпион', 'Весы',
-#                 'Дева', 'Лев', 'Рак', 'Близнецы', 'Телец', 'Овен']
 zodiac_signs = ['Рыбы \u2653\ufe0f', 'Водолей \u2652\ufe0f', 'Козерог \u2651\ufe0f',
                        'Стрелец \u2650\ufe0f', 'Скорпион \u264f\ufe0f', 'Весы \u264e\ufe0f',
                 'Дева \u264d\ufe0f', 'Лев \u264c\ufe0f', 'Рак \u264b\ufe0f', 'Близнецы \u264a\ufe0f',
