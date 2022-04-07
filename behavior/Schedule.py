@@ -19,7 +19,7 @@ class Schedule(behavior.My_behavior.My_behavior):
     date = None
     result_data = None
     city_name = None
-    region = None
+    region_name = None
 
     def __init__(self, message):
         self.state = 'start'
@@ -57,7 +57,7 @@ class Schedule(behavior.My_behavior.My_behavior):
 
         dir_exists = os.path.exists('data')
         print('Directory exists: ' + str(dir_exists))
-        if(not dir_exists):
+        if not dir_exists:
             os.mkdir('data')
 
         with open('data/Schedule_data.csv', 'w', newline="", encoding="utf-8") as File:
@@ -82,25 +82,25 @@ class Schedule(behavior.My_behavior.My_behavior):
         else:
             print("ФАЙЛ В ОПЕРАТИВКЕ, ПЛЯШЕМ")
 
-    async def start(self, message):
+    async def start_schedule(self, message):
         self.response = "Какой вид транспорта тебя интересует?"
         self.state = 'choice_transport'
 
     async def get_transport(self, message):
         transport = message.split()[0].lower()
         try:
-            if message.capitalize() in config.answers[config.schedule_command]:
+            if message.capitalize() in config.answers[config.answers['/start'][1]]:
                 self.transport = [transport, config.transport_dict[transport]]
                 print(self.transport)
                 self.response = f'Выбери город отправления'
                 self.button_names = None
                 self.state = 'choice_cities'
             else:
-                self.response = await Exception_behavior.Exception_Behavior(message, error_code=4).get_response(message)
-                self.button_names = config.answers[config.schedule_command]
+                self.response = await Exception_behavior.Exception_Behavior(error_code=4).get_response(message)
+                self.button_names = config.answers[config.answers['/start'][1]]
                 self.state = 'choice_transport'
         except:
-            self.response = await Exception_behavior.Exception_Behavior(message, error_code=0).get_response(message)
+            self.response = await Exception_behavior.Exception_Behavior(error_code=0).get_response(message)
             self.state = 'end'
             self.button_names = None
 
@@ -120,7 +120,7 @@ class Schedule(behavior.My_behavior.My_behavior):
                 self.arrival_city_code = same_named_cities.City_code.unique()[0]
                 await self.get_date()
         else:
-            self.response = "что-то делаю неправильно"
+            self.response = "Что-то делаю неправильно"
             self.state = 'end'
 
     async def choice_cities(self, new_message):
@@ -164,8 +164,8 @@ class Schedule(behavior.My_behavior.My_behavior):
                                           (Schedule.data['Transport_type'] == self.transport[1]) &
                                           (Schedule.data['Region'] == new_message)]
         if len(same_named_cities.City_code.unique()) > 1:
-            self.region = new_message
-            self.response = 'В этом регионе есть несколько городов с таким названием, выбери нужную станцию'
+            self.region_name = new_message
+            self.response = 'В этом регионе есть несколько станций с таким названием, выбери нужную:'
             self.state = 'choice_station'
             self.button_names = same_named_cities.Station.unique()
         elif len(same_named_cities.City_code.unique()) == 0:
@@ -175,11 +175,13 @@ class Schedule(behavior.My_behavior.My_behavior):
             await self.get_cities(same_named_cities)
 
     async def choice_station(self, new_message):
+        print("self.region_name ==== ", self.region_name)
         same_named_cities = Schedule.data[(Schedule.data['City'] == self.city_name) &
                                           (Schedule.data['Country'] == self.country_name) &
                                           (Schedule.data['Transport_type'] == self.transport[1]) &
-                                          (Schedule.data['Region'] == self.region) &
+                                          (Schedule.data['Region'] == self.region_name) &
                                           (Schedule.data['Station'] == new_message)]
+        print("==== same_named_cities ====\n", same_named_cities.City_code.unique())
         if len(same_named_cities.City_code.unique()) == 0:
             self.state = 'choice_station'
             self.response = 'Используй кнопки'
@@ -188,10 +190,6 @@ class Schedule(behavior.My_behavior.My_behavior):
 
     async def get_date(self):
         result = await self.send_url()
-
-        # if 'error' in result:
-        #     self.response = "Ошибка при обращении к серверу"
-        #     self.state = 'end'
         try:
             print(result['pagination']['total'])
             len_result = result['pagination']['total']
@@ -199,6 +197,7 @@ class Schedule(behavior.My_behavior.My_behavior):
                 self.response = (f'Похоже, что таких рейсов на в этом направлении'
                                  f' не запланировано, попробуй выбрать другой маршрут')
                 self.state = "end"
+                self.button_names = None
             else:
                 self.response = f"Найдено {len_result} рейсов\n" \
                                 f"Теперь осталось  выбрать дату отправления:"
@@ -206,6 +205,8 @@ class Schedule(behavior.My_behavior.My_behavior):
                 self.state = 'choice_date'
         except:
             self.response = await Exception_behavior.Exception_Behavior(error_code=5).get_response()
+            self.state = 'end'
+            self.button_names = None
 
     async def logic_date_button(self, len_result, result):
         all_date = []
@@ -231,7 +232,7 @@ class Schedule(behavior.My_behavior.My_behavior):
             print(ex)
             return False
 
-    async def choice_date(self, message_text):      # choose_date
+    async def choose_date(self, message_text):      # choose_date
         if message_text not in self.button_names:
             self.response = 'Используй кнопки'
             self.state = 'choice_date'
@@ -305,7 +306,7 @@ class Schedule(behavior.My_behavior.My_behavior):
                 self.response = 'Выход за рамки'
                 self.state = 'get_result'
         except:
-            self.response = await Exception_behavior.Exception_Behavior(message_text, error_code=4).get_response(message_text)
+            self.response = await Exception_behavior.Exception_Behavior(error_code=4).get_response()
             self.state = 'get_result'
 
     async def print_result(self, result):
@@ -314,10 +315,7 @@ class Schedule(behavior.My_behavior.My_behavior):
         duration_flight = result.duration_flight
         journey_time = result.journey_time
         short_title = result.title
-        # days = self.result['segments']['days']
-        from_station_type = result.from_station_type
         from_station_title = result.from_station_title
-        to_station_type = result.to_station_type
         to_station_title = result.to_station_title
         carrier = result.carrier
         vehicle = result.vehicle
@@ -337,13 +335,13 @@ class Schedule(behavior.My_behavior.My_behavior):
         return self.response
 
     states = {
-        "start": start,
+        "start": start_schedule,
         "choice_transport": get_transport,
         "choice_cities": choice_cities,
         "choice_country": choice_country,
         "choice_region": choice_region,
         "choice_station": choice_station,
-        "choice_date": choice_date,
+        "choice_date": choose_date,
         "ticket_info": ticket_info,
         "get_result": get_result
     }

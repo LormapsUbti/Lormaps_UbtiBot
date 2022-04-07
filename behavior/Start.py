@@ -11,10 +11,8 @@ class Start(behavior.My_behavior.My_behavior):
 
     async def logic_response(self, message):
         self.state = 'end'
-        if message in config.start_options_list[0:2]:
-            self.response = f'Нажал на "{message}", список моих возможностей находится ниже:'
-        elif message == "/quit":
-            self.response = "Начнем с начала, список моих возможностей находится ниже:"
+        if message in config.start_options_list:
+            self.response = f'Начнем с начала, список моих возможностей находится ниже:'
 
     async def get_response(self, message):
         await self.logic_response(message.text)

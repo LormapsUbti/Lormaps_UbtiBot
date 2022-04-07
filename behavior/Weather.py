@@ -4,8 +4,7 @@ import requests
 from _datetime import datetime
 from deep_translator import GoogleTranslator
 from behavior import Exception_behavior
-
-weather_state_list = ['start', 'find_weather', 'end']
+from Create_bot import bot
 
 
 class Weather(behavior.My_behavior.My_behavior):
@@ -14,7 +13,7 @@ class Weather(behavior.My_behavior.My_behavior):
     weather_result = None
 
     def __init__(self, message):
-        self.state = weather_state_list[0]
+        self.state = config.weather_state_list[0]
         self.button_names = config.answers[message.text]
 
     ###################
@@ -24,27 +23,28 @@ class Weather(behavior.My_behavior.My_behavior):
                 self.response = 'Напиши название города, если тебе лень -\n' \
                                 'ты можешь отправить мне свои геоданные,\n' \
                                 'для этого нажми кнопку "Геоданные"'
-                self.state = "find_weather"
-            elif self.state == "find_weather":
+                self.state = config.weather_state_list[1]
+            elif self.state == config.weather_state_list[1]:
                 self.button_names = None
                 if message.text is None and message.location.latitude is not None:
                     lat = message.location.latitude
                     lon = message.location.longitude
                     self.response = await self.print_weather(await self.current_weather(lat, lon))
-                    self.state = "end"
+                    self.state = config.weather_state_list[2]
                 else:
                     try:
                         self.weather_result = await self.current_weather(message.text)
                         print("weather_result === ", self.weather_result)
+                        await bot.send_location(message.chat.id, self.weather_result['coord']['lat'], self.weather_result['coord']['lon'])
                         self.response = await self.print_weather(self.weather_result)
-                        self.state = 'end'
+                        self.state = config.weather_state_list[2]
                     except:
                         if not self.weather_result:
-                            self.response = await Exception_behavior.Exception_Behavior(message, error_code=2).get_response(message)
+                            self.response = await Exception_behavior.Exception_Behavior(error_code=2).get_response()
                         else:
-                            self.response = await Exception_behavior.Exception_Behavior(message, error_code=3).get_response(message)
+                            self.response = await Exception_behavior.Exception_Behavior(error_code=3).get_response()
         except:
-            self.response = await Exception_behavior.Exception_Behavior(message, error_code=0).get_response(message)
+            self.response = await Exception_behavior.Exception_Behavior(error_code=0).get_response()
 
     async def get_response(self, message):
         await self.logic_response(message)
@@ -53,26 +53,17 @@ class Weather(behavior.My_behavior.My_behavior):
     async def current_weather(self, lat, lon=0):
         print("current_weather")
         if lon != 0:
-            print("current_weather by local")
-            try:
-                url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={config.open_weather_token}&units=metric"  # отправляем запрос на апи
-                req = requests.get(url)
-                data = req.json()
-                return data
-
-            except:
-                return False
+            url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={config.open_weather_token}&units=metric"  # отправляем запрос на апи
         else:
-            print("current_weather by city name")
-            message = lat
-            try:
-                url = f"http://api.openweathermap.org/data/2.5/weather?q={message}&appid={config.open_weather_token}&units=metric"
-                req = requests.get(url)
-                data = req.json()
-                return data
+            url = f"http://api.openweathermap.org/data/2.5/weather?q={lat}&appid={config.open_weather_token}&units=metric"
 
-            except:
-                return False
+        try:
+            req = requests.get(url)
+            data = req.json()
+            return data
+
+        except:
+            return False
 
     async def print_weather(self, data):
 
