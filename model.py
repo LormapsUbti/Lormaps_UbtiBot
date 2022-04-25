@@ -1,18 +1,36 @@
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
+import config
+import csv
+import pandas as pd
+from behavior import Horoscope
 
 
-def get_model_answer(zodiac_sign):
-    tok = GPT2Tokenizer.from_pretrained("/VVEDI/SVOI/PUT")
-    model = GPT2LMHeadModel.from_pretrained("/VVEDI/SVOI/PUT")
+def get_model_answer():
+    if len(Horoscope.Horoscope.data) < 12:
+        sign_new = [sign.split()[0] for sign in config.zodiac_signs]
+        if len(Horoscope.Horoscope.data) == 0:
+            sign_name = sign_new[0]
+        else:
+            sign_name = list(set(sign_new) - set(Horoscope.Horoscope.data.Sign.unique()))[0]
+    else:
+        sign_name = 'random'
+
+    tok = GPT2Tokenizer.from_pretrained("models/res_iter2")
+    model = GPT2LMHeadModel.from_pretrained("models/res_iter2")
     model.cuda()
 
     text = 'Гороскоп: '
-    input = tok.encode(text, return_tensors="pt")
+    inpt = tok.encode(text, return_tensors="pt")
 
-    out = model.generate(input.cuda(), max_length=100, repetition_penalty=5.0, do_sample=True, top_k=5, top_p=0.95,
-                         temperature=0.7)
+    out = model.generate(inpt.cuda(), min_length=200, max_length=300, do_sample=True, top_k=2,
+                         top_p=0.90, temperature=0.7, no_repeat_ngram_size=3)
 
-    answer = f'Гороскоп на сегодня для {zodiac_sign}:'
-    predict_horo = answer + str(tok.decode(out[0]).split()[0])
-    return predict_horo
+    predict = str(tok.decode(out[0]).split('Гороскоп:')[1].split('\n')[0])
 
+    with open('data/Horoscope_data.csv', 'a', encoding="utf-8", newline='') as file:
+        writer = csv.writer(file, delimiter=";")
+        writer.writerow([sign_name, predict])
+
+    Horoscope.Horoscope.data = pd.read_csv('data/Horoscope_data.csv', sep=';')
+    print(f"len(Horoscope.data[{sign_name}]) === ",
+          len(Horoscope.Horoscope.data))

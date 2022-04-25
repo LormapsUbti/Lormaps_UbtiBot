@@ -1,5 +1,5 @@
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram import Bot, Dispatcher, executor, types
+from aiogram import Bot, Dispatcher
 from config import telegram_token
 
 storage = MemoryStorage()

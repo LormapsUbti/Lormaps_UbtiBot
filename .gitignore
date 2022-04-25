@@ -1,4 +1,5 @@
 __pycache__
 .idea
 config.py
+env_vars.py
 data/*

@@ -1,0 +1,7 @@
+aiogram~=2.19
+requests~=2.27.1
+pandas~=1.2.4
+python-dateutil~=2.8.1
+transformers=3.5.0
+folium==0.2.1
+torch==1.4.0
